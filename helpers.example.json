@@ -1,0 +1,14 @@
+{
+  "launchAgents": [
+    {
+      "id": "example-job",
+      "name": "Example Job",
+      "label": "com.example.job",
+      "plistPath": "~/Library/LaunchAgents/com.example.job.plist"
+    }
+  ],
+  "autoLightDisplay": {
+    "match": "any-external",
+    "onDisconnect": "restore"
+  }
+}

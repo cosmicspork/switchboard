@@ -1,0 +1,8 @@
+.build/
+*.app
+.DS_Store
+.swiftpm/
+
+# Real machine config lives in ~/Library/Application Support — never commit one
+# if it happens to land in the working tree.
+helpers.json
