@@ -56,3 +56,19 @@ final class MockDisplayWatcher: DisplayWatching {
         AsyncStream { _ in }
     }
 }
+
+/// A `ProcessRunning` that succeeds and records every argv it was given, so a
+/// test can assert which launchctl commands ran and against which label.
+final class RecordingRunner: ProcessRunning, @unchecked Sendable {
+    private let lock = NSLock()
+    private var recorded: [[String]] = []
+
+    var calls: [[String]] {
+        lock.withLock { recorded }
+    }
+
+    func run(_ executable: URL, _ arguments: [String]) async throws -> ProcessResult {
+        lock.withLock { recorded.append(arguments) }
+        return ProcessResult(exitCode: 0)
+    }
+}
