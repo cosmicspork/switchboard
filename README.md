@@ -43,6 +43,11 @@ A missing file is fine — you just get the auto-light helper with defaults and 
 LaunchAgent helpers. See [`helpers.example.json`](helpers.example.json) for the
 shape. Use **Open Config Folder…** in the menu to jump there.
 
+After editing, choose **Reload Config**. New and removed helpers, and renames,
+apply at once. A changed `label` or `plistPath` applies at once to a helper that
+is off; for one that is on, the menu says so and the change applies the next
+time you switch it off, so a reload never stops a running job.
+
 ```json
 {
   "launchAgents": [

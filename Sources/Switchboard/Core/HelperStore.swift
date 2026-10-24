@@ -15,18 +15,21 @@ final class HelperStore {
     private let launchctl: LaunchctlClient
     private let appearance: any AppearanceControlling
     private let watcher: any DisplayWatching
+    private let configURL: URL
     private var didBootstrap = false
 
     init(
         states: EnabledStateStore = EnabledStateStore(),
         launchctl: LaunchctlClient = LaunchctlClient(runner: ProcessRunner()),
         appearance: any AppearanceControlling = AppearanceController(runner: ProcessRunner()),
-        watcher: any DisplayWatching = ScreenObserver()
+        watcher: any DisplayWatching = ScreenObserver(),
+        configURL: URL = ConfigLoader.defaultURL
     ) {
         self.states = states
         self.launchctl = launchctl
         self.appearance = appearance
         self.watcher = watcher
+        self.configURL = configURL
     }
 
     /// Loads config and starts previously-enabled helpers. Idempotent.
@@ -40,13 +43,14 @@ final class HelperStore {
     ///
     /// Existing helpers are preserved by id so a reload never disturbs a running
     /// in-process helper (e.g. auto-light loses no captured state) and never
-    /// boots out a launchd job. New entries are added and started if they were
-    /// previously enabled; entries dropped from the config disappear from the
-    /// menu but their launchd jobs are left running.
+    /// boots out a launchd job; a LaunchAgent helper takes its edited entry via
+    /// `apply(_:)`. New entries are added and started if they were previously
+    /// enabled; entries dropped from the config disappear from the menu but
+    /// their launchd jobs are left running.
     func reloadConfig() {
         let config: AppConfig
         do {
-            config = try ConfigLoader.load() ?? .empty
+            config = try ConfigLoader.load(from: configURL) ?? .empty
             loadError = nil
         } catch {
             config = .empty
@@ -59,9 +63,12 @@ final class HelperStore {
 
         var rebuilt: [any Helper] = []
         for agentConfig in config.launchAgents {
-            rebuilt.append(existing[agentConfig.id] ?? register(
-                LaunchAgentHelper(config: agentConfig, launchctl: launchctl)
-            ))
+            if let helper = existing[agentConfig.id] as? LaunchAgentHelper {
+                helper.apply(agentConfig)
+                rebuilt.append(helper)
+            } else {
+                rebuilt.append(register(LaunchAgentHelper(config: agentConfig, launchctl: launchctl)))
+            }
         }
         rebuilt.append(existing[AutoLightDisplayHelper.helperID] ?? register(
             AutoLightDisplayHelper(

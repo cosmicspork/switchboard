@@ -56,6 +56,12 @@ private struct HelperRow: View {
                 get: { helper.isEnabled },
                 set: { store.setEnabled($0, for: helper) }
             ))
+            if let notice = helper.notice {
+                Text(notice)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if let error = helper.status.errorMessage {
                 Text(error)
                     .font(.caption2)

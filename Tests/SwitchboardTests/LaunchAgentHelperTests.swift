@@ -42,4 +42,54 @@ final class LaunchAgentHelperTests: XCTestCase {
         XCTAssertFalse(helper.isEnabled)
         XCTAssertEqual(helper.status, .stopped)
     }
+
+    func testApplyRenamesInPlace() {
+        let helper = LaunchAgentHelper(
+            config: config,
+            launchctl: LaunchctlClient(runner: RecordingRunner())
+        )
+        helper.apply(LaunchAgentConfig(id: "job", name: "Renamed", label: "com.a", plistPath: "/x.plist"))
+        XCTAssertEqual(helper.name, "Renamed")
+        XCTAssertNil(helper.notice)
+    }
+
+    func testApplyWhileOffUsesTheNewJobOnNextStart() async {
+        let runner = RecordingRunner()
+        let helper = LaunchAgentHelper(config: config, launchctl: LaunchctlClient(runner: runner))
+        helper.apply(LaunchAgentConfig(id: "job", name: "Job", label: "com.b", plistPath: "/y.plist"))
+        XCTAssertNil(helper.notice)
+
+        await helper.start()
+        XCTAssertTrue(runner.calls.contains { $0.first == "bootstrap" && $0.last == "/y.plist" })
+    }
+
+    func testApplyWhileOnWaitsForTheNextSwitchOff() async {
+        let runner = RecordingRunner()
+        let helper = LaunchAgentHelper(config: config, launchctl: LaunchctlClient(runner: runner))
+        await helper.start()
+        let callsBeforeApply = runner.calls.count
+
+        helper.apply(LaunchAgentConfig(id: "job", name: "Job", label: "com.b", plistPath: "/y.plist"))
+        XCTAssertEqual(runner.calls.count, callsBeforeApply, "a reload must not touch the running job")
+        XCTAssertNotNil(helper.notice)
+
+        await helper.stop()
+        let bootout = runner.calls.last { $0.first == "bootout" }
+        XCTAssertEqual(bootout?.last?.hasSuffix("/com.a"), true, "the old job is the one booted out")
+        XCTAssertNil(helper.notice)
+
+        await helper.start()
+        XCTAssertEqual(runner.calls.last { $0.first == "bootstrap" }?.last, "/y.plist")
+    }
+
+    func testRevertingAPendingEditClearsTheNotice() async {
+        let helper = LaunchAgentHelper(
+            config: config,
+            launchctl: LaunchctlClient(runner: RecordingRunner())
+        )
+        await helper.start()
+        helper.apply(LaunchAgentConfig(id: "job", name: "Job", label: "com.b", plistPath: "/y.plist"))
+        helper.apply(config)
+        XCTAssertNil(helper.notice)
+    }
 }

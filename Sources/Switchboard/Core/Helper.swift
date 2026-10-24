@@ -33,8 +33,14 @@ protocol Helper: AnyObject, Identifiable {
     var name: String { get }
     var isEnabled: Bool { get }
     var status: HelperStatus { get }
+    /// Something the user should act on that is not an error, shown in the menu.
+    var notice: String? { get }
     func start() async
     func stop() async
+}
+
+extension Helper {
+    var notice: String? { nil }
 }
 
 extension HelperStatus {
