@@ -14,6 +14,9 @@ with two generic helper types:
 Helper *types* live in the code; *which* helpers exist on your machine is pure
 configuration (`helpers.json`), so nothing personal is committed to this repo.
 
+On Linux, [Switchboard for Linux](https://github.com/cosmicspork/switchboard-linux)
+does the same for systemd user units from the system tray.
+
 ## Requirements
 
 - macOS 14 or later.
